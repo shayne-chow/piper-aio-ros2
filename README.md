@@ -1,3 +1,5 @@
+> ROS2 Humble + 四独立 CAN 的人工示教采集：见 [ROS2 四 CAN 操作说明](docs/ROS2_4CAN.md)。新入口为 `start_ros2.sh`、`start_cam_ros2.sh` 和 `collect_ros2.sh`。
+
 <p align="center">
   <h1 align="center">Piper All In One</h1>
 </p>

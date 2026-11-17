@@ -214,3 +214,8 @@ build
 CATKIN_IGNORE
 
 .DS_Store
+# Separate ROS2 camera build artifacts
+/camera_ws/build_ros2/
+/camera_ws/install_ros2/
+
+/camera_ws/log/
