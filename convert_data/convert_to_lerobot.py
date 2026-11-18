@@ -11,7 +11,6 @@ from contextlib import contextmanager
 from typing import List
 
 from features import FEATURES
-from lerobot.common.datasets.lerobot_dataset import LeRobotDataset
 
 INSTRUCTION = "Example"
 DEFAULT_COLLECT = "teleop"
@@ -92,7 +91,9 @@ def suppress_stderr_on_success():
 
 def _load_hdf5_arrays(episode_path: str | Path) -> dict:
     with h5py.File(episode_path) as f:
-        actions = np.array(f["action"])
+        # ROS2 records the command sent to the follower separately from the leader target.
+        action_key = "action_applied" if "action_applied" in f else "action"
+        actions = np.array(f[action_key])
         data = {
             "state_images_cam_high": np.array(f["observations/images/cam_high"]),
             "state_images_cam_left_wrist": np.array(f["observations/images/cam_left_wrist"]),
@@ -244,6 +245,8 @@ def main(
     zero_arm: str = "none",
     collect_label: str | None = None,
 ):
+    from lerobot.common.datasets.lerobot_dataset import LeRobotDataset
+
     target_dir = f"{tgt_path}/{save_repoid}"
     error_log_path = Path(f"error_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt")
     if os.path.exists(target_dir):

@@ -116,7 +116,7 @@ PosCmd 没有 header，末端姿态流使用 ROS 接收时间；关节/图像使
 
 保留原格式：`observations/qpos/qvel/effort/eef_pose`（14维）、三路 `observations/images/*`、`action`（14维）、`collect`。
 `action` 是主臂绝对目标，新增 `action_applied` 为限速后实际发送的从臂目标；新增 `timestamps/*` 和格式属性。
-图像明确转换为 RGB8，尺寸采用实际图像尺寸；默认相机名与原 LeRobot 转换器一致。
+彩色输入默认订阅三台相机的 color/image_raw/compressed（sensor_msgs/CompressedImage），按消息头时间配帧后解码。若通过 image_topics 指定原始 Image 话题，仍可采集；以 /compressed 结尾的话题按压缩消息订阅。图像明确转换为 RGB8，尺寸采用实际图像尺寸；默认相机名与原 LeRobot 转换器一致。
 采集不会再调用 ROS1 两 CAN 的回零/恢复模式服务；ROS1 推理与 replay 脚本本次未迁移。
 未保存/异常中断的文件保留为 `.partial.hdf5`；只有显式 save 才发布成 `episode_N.hdf5`，不会覆盖已有文件。
 

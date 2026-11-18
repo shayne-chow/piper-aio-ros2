@@ -9,7 +9,7 @@ import numpy as np
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
-from sensor_msgs.msg import Image, JointState
+from sensor_msgs.msg import CompressedImage, Image, JointState
 from std_msgs.msg import String
 from std_srvs.srv import Trigger
 from cv_bridge import CvBridge
@@ -35,7 +35,7 @@ class Recorder(Node):
         super().__init__('piper_sft_recorder')
         defaults={'dataset_dir':str(Path.home()/'data'),'task_name':'piper_ros2',
                   'camera_names':['cam_high','cam_left_wrist','cam_right_wrist'],
-                  'image_topics':['/camera_f/color/image_raw','/camera_l/color/image_raw','/camera_r/color/image_raw'],
+                  'image_topics':['/camera_f/color/image_raw/compressed','/camera_l/color/image_raw/compressed','/camera_r/color/image_raw/compressed'],
                   'depth_topics':['/camera_f/depth/image_raw','/camera_l/depth/image_raw','/camera_r/depth/image_raw'],
                   'use_depth':False,'frame_rate':30.0,'max_age':0.2,'max_skew':0.05}
         for key,value in defaults.items(): self.declare_parameter(key,value)
@@ -51,7 +51,9 @@ class Recorder(Node):
             for role in ('leader','follower','follower_cmd'):
                 self.subscribe(f'{role}_{side}',f'/{role}/joint_{side}',JointState,30)
             self.subscribe(f'pose_{side}',f'/follower/end_pose_euler_{side}',PosCmd,30)
-        for name,topic in zip(self.names,self.p('image_topics')): self.subscribe(f'image_{name}',topic,Image,10)
+        for name,topic in zip(self.names,self.p('image_topics')):
+            image_type = CompressedImage if topic.endswith('/compressed') else Image
+            self.subscribe(f'image_{name}',topic,image_type,10)
         if self.p('use_depth'):
             for name,topic in zip(self.names,self.p('depth_topics')): self.subscribe(f'depth_{name}',topic,Image,10)
         self.subs.append(self.create_subscription(String,'/teleop/status',self.status,10))
@@ -120,7 +122,12 @@ class Recorder(Node):
                 row[path]=np.concatenate(values)
             row['observations/eef_pose']=np.array([getattr(messages[f'pose_{s}'],f) for s in ('left','right') for f in ('x','y','z','roll','pitch','yaw','gripper')])
             for name in self.names:
-                row[f'observations/images/{name}']=self.bridge.imgmsg_to_cv2(messages[f'image_{name}'],'rgb8')
+                image = messages[f'image_{name}']
+                if isinstance(image, CompressedImage):
+                    rgb = self.bridge.compressed_imgmsg_to_cv2(image, 'rgb8')
+                else:
+                    rgb = self.bridge.imgmsg_to_cv2(image, 'rgb8')
+                row[f'observations/images/{name}'] = rgb
                 if self.p('use_depth'):
                     image=messages[f'depth_{name}']
                     if image.encoding!='16UC1': raise ValueError('Depth must be 16UC1 millimeters')
